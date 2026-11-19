@@ -137,7 +137,7 @@ Windows 无窗口常驻用 `pythonw gemini_watch.py` 或双击 `start_watch.bat`
 
 ### 云端构建（三平台）
 
-仓库内置 [`.github/workflows/build.yml`](.github/workflows/build.yml)：推送到 `main` / `master`、打 `v*` 标签，或在 Actions 页面手动 `Run workflow`，会并行构建 Windows / macOS / Linux 三个平台。
+仓库内置 [`.github/workflows/build.yml`](.github/workflows/build.yml)：推送 `v*` 标签或在 Actions 页面手动 `Run workflow`，会并行构建 Windows / macOS / Linux 三个平台。日常提交到 `main` 不会触发构建，避免占用 macOS runner 的排队时间；需要临时出包时用 `workflow_dispatch` 手动跑一次即可。
 
 使用前提：**Git 仓库根就是这个 `gemini-watch` 目录**。若把仓库建在上级目录，需要在 workflow 里补 `defaults.run.working-directory: gemini-watch` 并调整 checkout 路径。
 
@@ -174,7 +174,7 @@ git push origin v1.0.1
 
 流程是：三个平台并行构建 → 汇总产物 → 创建同名 Release 并上传附件（若该标签已有 Release，则覆盖上传）。附件名会自动带版本号，例如 `GeminiWatch-v1.0.1-windows-x64.exe`。
 
-普通 push 只生成 Actions Artifacts，不会发 Release。某个架构构建失败时，其余产物仍会照常发布。
+手动触发（`workflow_dispatch`）只生成 Actions Artifacts，不会发 Release。某个架构构建失败时，其余产物仍会照常发布。
 
 ### Windows
 

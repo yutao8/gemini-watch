@@ -1,11 +1,9 @@
 name: Build all platforms
 
 on:
+  # 只在发版（推送 v* 标签）或手动触发时构建，避免日常提交占用 macOS runner 排队
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
     tags:
       - "v*"
 
