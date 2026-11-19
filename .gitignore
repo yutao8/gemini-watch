@@ -1,0 +1,23 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# PyInstaller 构建产物
+build/
+dist/
+*.spec
+assets/app.icns
+
+# 运行期数据（实际写入 %APPDATA%\GeminiWatch）
+gemini_watch.log
+gemini_watch.log.1
+history.jsonl
+history.jsonl.1
+*.lock
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

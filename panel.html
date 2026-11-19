@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gemini 可用性面板</title>
+<style>
+  :root {
+    --bg: #0a1120;
+    --panel: #111a2b;
+    --panel-2: #16223a;
+    --line: #223252;
+    --text: #e8eef9;
+    --muted: #8ba0bd;
+    --up: #22c55e;
+    --degraded: #f59e0b;
+    --down: #ef4444;
+    --unknown: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    padding: 22px 28px 24px;
+    display: flex; flex-direction: column;
+    background: radial-gradient(1200px 600px at 12% -10%, #16233c 0%, var(--bg) 55%);
+    color: var(--text);
+    font: 14px/1.55 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    min-height: 100%;
+    scrollbar-width: thin; scrollbar-color: #2b3c59 transparent;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2b3c59; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4f72; }
+  ::-webkit-scrollbar-button { display: none; }
+  header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; flex: 0 0 auto; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: .3px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 13px; border-radius: 999px; font-size: 13px;
+    background: rgba(148, 163, 184, .12); border: 1px solid var(--line);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--unknown); }
+  .meta { color: var(--muted); font-size: 12.5px; margin-left: auto; }
+  .meta b { color: var(--text); font-weight: 500; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; flex: 0 0 auto; }
+  .card {
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px;
+  }
+  .card .top { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+  .card .name { font-weight: 600; font-size: 14.5px; }
+  .card .status { margin-left: auto; font-size: 12.5px; display: flex; align-items: center; gap: 6px; }
+  .card .detail { color: var(--muted); font-size: 12.5px; min-height: 20px; margin-bottom: 12px; word-break: break-all; }
+  .metrics { display: flex; gap: 18px; }
+  .metrics div { display: flex; flex-direction: column; gap: 2px; }
+  .metrics span { color: var(--muted); font-size: 11.5px; }
+  .metrics strong { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bar { height: 4px; border-radius: 4px; background: #1c2a44; margin-top: 12px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 4px; }
+  .section { margin-top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .section h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; color: var(--text); letter-spacing: .2px; display: flex; align-items: center; }
+  .section h2 small { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .clear-btn {
+    margin-left: auto; font-size: 12px; font-weight: 500; color: var(--muted);
+    background: transparent; border: 1px solid var(--line); border-radius: 8px;
+    padding: 4px 10px; cursor: pointer; transition: .15s;
+  }
+  .clear-btn:hover { color: #fca5a5; border-color: #7f1d1d; background: rgba(239, 68, 68, .08); }
+  .modal { position: fixed; inset: 0; background: rgba(5, 10, 20, .72); display: flex; align-items: center; justify-content: center; z-index: 50; backdrop-filter: blur(2px); }
+  .modal[hidden] { display: none; }
+  .modal-box { width: min(380px, 88vw); background: #111c2e; border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, .5); }
+  .modal-box h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+  .modal-box p { margin: 0 0 18px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-actions button { font: inherit; font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; border: 1px solid var(--line); background: #1a2740; color: var(--text); }
+  .modal-actions button.danger { background: #b91c1c; border-color: #dc2626; color: #fff; }
+  .modal-actions button.danger:hover { background: #dc2626; }
+  .chart-section { flex: 1 1 auto; min-height: 220px; display: flex; flex-direction: column; }
+  .chart-wrap { position: relative; flex: 1 1 auto; height: auto; min-height: 150px; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12.5px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1 1 auto; min-height: 220px; }
+  .split .section { margin-top: 16px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .card .avail { gap: 8px; overflow: visible; min-height: 0; }
+  .card .avail-row { grid-template-columns: 104px 1fr 46px; gap: 8px; font-size: 11.5px; }
+  .card .avail-row .track { height: 6px; }
+  @media (max-width: 880px) {
+    body { padding: 18px 14px 20px; height: auto; overflow: auto; }
+    .split { grid-template-columns: 1fr; flex: 0 0 auto; }
+    .chart-section { flex: 0 0 auto; }
+    .chart-wrap { height: 240px; }
+    .events { max-height: 300px; }
+    .records { max-height: 280px; }
+  }
+  .events { list-style: none; margin: 0; padding: 0; flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: #2b3c59 transparent; }
+  .events::-webkit-scrollbar { width: 8px; }
+  .events::-webkit-scrollbar-track { background: transparent; }
+  .events::-webkit-scrollbar-thumb { background: #2b3c59; border-radius: 8px; }
+  .events::-webkit-scrollbar-thumb:hover { background: #3a4f72; }
+  .events::-webkit-scrollbar-button { display: none; }
+  .events li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dashed #1d2b45; font-size: 12.5px; }
+  .events li:last-child { border-bottom: none; }
+  .events time { color: var(--muted); font-variant-numeric: tabular-nums; flex: 0 0 92px; }
+  .events .who { flex: 0 0 auto; }
+  .events .why { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 12.5px; padding: 10px 0; }
+  .records { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: #2b3c59 transparent; }
+  .records::-webkit-scrollbar { width: 8px; }
+  .records::-webkit-scrollbar-track { background: transparent; }
+  .records::-webkit-scrollbar-thumb { background: #2b3c59; border-radius: 8px; }
+  .records::-webkit-scrollbar-thumb:hover { background: #3a4f72; }
+  .records::-webkit-scrollbar-button { display: none; }
+  .rec-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #1d2b45; font-size: 12.5px; }
+  .rec-row:last-child { border-bottom: none; }
+  .rec-row time { color: var(--muted); font-variant-numeric: tabular-nums; flex: 0 0 84px; }
+  .rec-row .ov { flex: 0 0 58px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; background: #16223a; border: 1px solid var(--line); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .chip i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .records-section { flex: 0 0 auto; }
+  .chart-section { flex: 1 1 45%; }
+  .alert {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px; padding: 12px 16px; border-radius: 12px;
+    background: rgba(239, 68, 68, .13); border: 1px solid rgba(239, 68, 68, .5);
+    color: #fecaca; font-size: 13px; flex: 0 0 auto;
+    animation: alertPulse 1.8s ease-in-out infinite;
+  }
+  .alert[hidden] { display: none; }
+  .alert .icon {
+    flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
+    background: #ef4444; color: #fff; display: flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: 13px;
+  }
+  .alert strong { color: #fff; font-weight: 600; }
+  .alert .sub { color: #fca5a5; font-size: 12px; margin-top: 2px; }
+  .alert button { margin-left: auto; background: #7f1d1d; border-color: #b91c1c; color: #fff; }
+  .alert button:hover { background: #991b1b; }
+  @keyframes alertPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, .10); }
+  }
+  .avail { display: flex; flex-direction: column; gap: 12px; overflow: auto; min-height: 0; }
+  .avail-row { display: grid; grid-template-columns: 118px 1fr 54px; align-items: center; gap: 10px; font-size: 12.5px; }
+  .avail-row .track { height: 7px; border-radius: 6px; background: #1c2a44; overflow: hidden; }
+  .avail-row .track i { display: block; height: 100%; background: linear-gradient(90deg, #22c55e, #38bdf8); }
+  .avail-row em { color: var(--muted); font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
+  button {
+    background: #1b2942; color: var(--text); border: 1px solid var(--line);
+    border-radius: 9px; padding: 6px 13px; font-size: 12.5px; cursor: pointer;
+  }
+  button:hover { background: #24344f; }
+  button:disabled { opacity: .8; cursor: progress; }
+  button .spin {
+    display: none; width: 12px; height: 12px; margin-right: 6px; vertical-align: -2px;
+    border: 2px solid rgba(148,163,184,.35); border-top-color: #38bdf8;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  button.loading .spin { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .badge.busy .dot { animation: breathe 1s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Gemini 可用性监控</h1>
+  <span class="badge" id="overall"><span class="dot"></span><span id="overallText">检测中</span></span>
+  <span class="meta" id="meta">加载中…</span>
+  <button id="refreshBtn" onclick="manualRefresh()"><span class="spin"></span><span id="refreshText">刷新</span></button></header>
+
+<div class="alert" id="alert" hidden>
+  <span class="icon">!</span>
+  <div>
+    <strong>无法连接监控服务</strong>
+    <div class="sub">请确认 GeminiWatch.exe 仍在运行；<span id="alertDetail"></span></div>
+  </div>
+  <button onclick="retryNow()">立即重试</button>
+</div>
+
+<div class="grid" id="cards"></div>
+
+<div class="section chart-section">
+  <h2>延迟趋势 <small>按小时平均，空档表示无成功探测</small></h2>
+  <div class="legend" id="legend"></div>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+</div>
+
+<div class="split">
+  <div class="section">
+    <h2>故障事件 <small>状态变化记录</small></h2>
+    <ul class="events" id="events"></ul>
+  </div>
+  <div class="section">
+    <h2>检测记录 <small>最近 12 轮，最新在前</small>
+      <button class="clear-btn" onclick="askClear()">清空记录</button>
+    </h2>
+    <div class="records" id="records"></div>
+  </div>
+</div>
+
+<div class="modal" id="clearModal" hidden>
+  <div class="modal-box">
+    <h3>确定清空检测记录？</h3>
+    <p>将删除全部历史延迟、可用率与故障事件数据，当前状态保留。此操作不可撤销。</p>
+    <div class="modal-actions">
+      <button onclick="closeClear()">取消</button>
+      <button class="danger" id="clearConfirm" onclick="doClear()">确定清空</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PALETTE = ['#38bdf8', '#a78bfa', '#34d399', '#fbbf24'];
+const SEV = {
+  up:      { text: '可用',  color: '#22c55e' },
+  degraded:{ text: '降级',  color: '#f59e0b' },
+  down:    { text: '不可用', color: '#ef4444' },
+  unknown: { text: '检测中', color: '#94a3b8' }
+};
+let data = null;
+
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  return d.toTimeString().slice(0, 8);
+}
+function fmtShort(ts) {
+  const d = new Date(ts * 1000);
+  return d.toTimeString().slice(0, 5);
+}
+function sevInfo(key) { return SEV[key] || SEV.unknown; }
+
+function pathColor() {
+  const p = (data && data.path) || '';
+  if (p === 'TUN' || p.indexOf('系统代理') === 0) return '#22c55e';
+  if (p.indexOf('直连') === 0 || p.indexOf('代理端口') === 0) return '#f59e0b';
+  return '#8ba0bd';
+}
+
+let busy = false, busyStart = 0, waitSeq = null;
+
+function setBusy(on, text) {
+  busy = on;
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.toggle('loading', on);
+  btn.disabled = on;
+  document.getElementById('refreshText').textContent = on ? (text || '检测中…') : '刷新';
+}
+
+function manualRefresh() {
+  if (busy) return;
+  busyStart = Date.now();
+  waitSeq = data ? (data.seq || 0) : 0;
+  setBusy(true, '检测中…');
+  fetch('/api/refresh', { method: 'POST' })
+    .then((r) => r.json())
+    .then((r) => { if (r && typeof r.seq === 'number') waitSeq = r.seq; })
+    .catch(() => {})
+    .finally(() => setTimeout(load, 300));
+}
+
+let retryTimer = null, disconnected = false;
+
+function hideAlert() {
+  if (!disconnected) return;
+  disconnected = false;
+  document.getElementById('alert').hidden = true;
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+}
+
+function showDisconnected(msg) {
+  disconnected = true;
+  const box = document.getElementById('alert');
+  box.hidden = false;
+  document.getElementById('alertDetail').textContent = '错误：' + msg + '（' + location.host + '）';
+  document.getElementById('overall').classList.remove('busy');
+  document.querySelector('#overall .dot').style.background = '#ef4444';
+  document.getElementById('overallText').textContent = '连接断开';
+  document.getElementById('meta').innerHTML = '<b style="color:#fca5a5">数据获取失败 · 每 3 秒自动重试</b>';
+  setBusy(false);
+  if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; load(); }, 3000);
+}
+
+function retryNow() {
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+  load();
+}
+
+function askClear() { document.getElementById('clearModal').hidden = false; }
+function closeClear() { document.getElementById('clearModal').hidden = true; }
+
+async function doClear() {
+  const btn = document.getElementById('clearConfirm');
+  btn.disabled = true;
+  btn.textContent = '清空中…';
+  try {
+    const res = await fetch('/api/clear', { method: 'POST' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const out = await res.json();
+    if (!out.ok) throw new Error('服务端未确认');
+    closeClear();
+    await load();
+  } catch (e) {
+    closeClear();
+    showDisconnected(e && e.message ? e.message : String(e));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '确定清空';
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeClear(); });
+document.getElementById('clearModal').addEventListener('click', e => {
+  if (e.target.id === 'clearModal') closeClear();
+});
+
+async function load() {
+  try {
+    const res = await fetch('/api/summary', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    data = await res.json();
+    hideAlert();
+    render();
+    const done = busy && !data.running && waitSeq !== null && (data.seq || 0) > waitSeq;
+    if (busy && (done || Date.now() - busyStart > 20000)) {
+      waitSeq = null;
+      const wait = Math.max(0, 400 - (Date.now() - busyStart));
+      setTimeout(() => setBusy(false), wait);
+    } else if (busy || data.running) {
+      setBusy(true, '检测中…');
+      setTimeout(load, 700);
+    } else {
+      setBusy(false);
+    }
+  } catch (e) {
+    showDisconnected(e && e.message ? e.message : String(e));
+  }
+}
+
+function render() {
+  const overall = sevInfo(data.overall);
+  const running = !!data.running;
+  const dot = document.querySelector('#overall .dot');
+  document.getElementById('overall').classList.toggle('busy', running);
+  dot.style.background = running ? '#38bdf8' : overall.color;
+  let overallLabel = running ? '检测中' : overall.text;
+  const allTargetsUp = (data.targets || []).every(t => t.sev === 'up');
+  if (!running && data.overall !== 'up' && allTargetsUp && (data.region || {}).ok === false) {
+    overallLabel += '（地区受限）';
+  }
+  document.getElementById('overallText').textContent = overallLabel;
+  const r = data.region || {};
+  const regSeg = r.via === 'api'
+    ? ` · 地区校验 <b style="color:${r.ok === false ? '#ef4444' : (r.ok ? '#22c55e' : '#8ba0bd')}">${r.ok === false ? '受限' : (r.ok ? '正常' : '未判定')}</b>`
+    : '';
+  document.getElementById('meta').innerHTML =
+    `每 <b>${data.interval}s</b> 检测 · 路径 <b style="color:${pathColor()}">${escapeHtml(data.path || '未知')}</b>` +
+    regSeg +
+    (data.paused ? ' · <b style="color:#f59e0b">已暂停</b>' : '') +
+    ` · 更新于 <b>${fmtTime(data.now)}</b>`;
+
+  document.getElementById('cards').innerHTML = data.targets.map((t, i) => {
+    const s = sevInfo(t.sev);
+    const color = PALETTE[i % PALETTE.length];
+    const avail = t.avail === null ? '—' : t.avail.toFixed(1) + '%';
+    const width = t.avail === null ? 0 : Math.max(2, t.avail);
+    return `<div class="card">
+      <div class="top">
+        <span class="dot" style="background:${s.color}"></span>
+        <span class="name">${escapeHtml(t.name)}</span>
+        <span class="status" style="color:${s.color}">${s.text}</span>
+      </div>
+      <div class="detail">${escapeHtml(t.detail || '')}</div>
+      <div class="metrics">
+        <div><span>可用率</span><strong>${avail}</strong></div>
+        <div><span>平均延迟</span><strong>${t.avg_ms ?? '—'}<small style="font-size:11px;color:#8ba0bd"> ms</small></strong></div>
+        <div><span>P95</span><strong>${t.p95_ms ?? '—'}<small style="font-size:11px;color:#8ba0bd"> ms</small></strong></div>
+      </div>
+      <div class="bar"><i style="width:${width}%;background:${color}"></i></div>
+    </div>`;
+  }).join('') + `<div class="card">
+      <div class="top"><span class="name">近 24 小时可用率</span></div>
+      <div class="avail" id="avail"></div>
+    </div>`;
+
+  renderLegend();
+  drawChart();
+  renderEvents();
+  renderAvail();
+  renderRecords();
+}
+
+const SHORT_NAME = { '网络连通': '连通', 'Antigravity 后端': 'Antigravity', 'Gemini API': 'API', 'Gemini 网页版': '网页版' };
+
+function renderRecords() {
+  const el = document.getElementById('records');
+  const rows = data.records || [];
+  if (!rows.length) { el.innerHTML = '<div class="empty">暂无记录，等待首次检测…</div>'; return; }
+  el.innerHTML = rows.map(r => {
+    const ov = sevInfo(r.overall);
+    const chips = data.targets.map(t => {
+      const v = (r.targets || {})[t.name];
+      const label = SHORT_NAME[t.name] || t.name;
+      if (!v) return `<span class="chip" style="opacity:.4">${escapeHtml(label)} —</span>`;
+      const s = sevInfo(v.s);
+      const ms = v.ms === null || v.ms === undefined ? '—' : v.ms + 'ms';
+      return `<span class="chip"><i style="background:${s.color}"></i>${escapeHtml(label)} ${ms}</span>`;
+    }).join('');
+    return `<div class="rec-row"><time>${fmtTime(r.ts)}</time><span class="ov" style="color:${ov.color}">${ov.text}</span><div class="chips">${chips}</div></div>`;
+  }).join('');
+}
+
+function renderLegend() {
+  document.getElementById('legend').innerHTML = data.targets.map((t, i) =>
+    `<span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${escapeHtml(t.name)}</span>`
+  ).join('');
+}
+
+function drawChart() {
+  const canvas = document.getElementById('chart');
+  const dpr = window.devicePixelRatio || 1;
+  const box = canvas.parentElement.getBoundingClientRect();
+  canvas.width = box.width * dpr;
+  canvas.height = box.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = box.width, h = box.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const pad = { l: 46, r: 12, t: 10, b: 24 };
+  const all = data.targets.flatMap(t => t.series || []);
+  const t0 = Math.min(...all.map(p => p[0]));
+  const t1 = Math.max(...all.map(p => p[0]));
+  const maxMs = Math.max(1, ...all.map(p => p[1] || 0));
+  if (!all.length || !isFinite(t0) || t1 <= t0) {
+    ctx.fillStyle = '#8ba0bd';
+    ctx.font = '12.5px "Segoe UI", sans-serif';
+    ctx.fillText('暂无历史数据，等待首次探测…', pad.l, h / 2);
+    return;
+  }
+  const niceMax = Math.ceil(maxMs / 500) * 500;
+  const x = ts => pad.l + (ts - t0) / (t1 - t0) * (w - pad.l - pad.r);
+  const y = ms => pad.t + (1 - ms / niceMax) * (h - pad.t - pad.b);
+
+  ctx.strokeStyle = '#1e2c46';
+  ctx.fillStyle = '#7c90ad';
+  ctx.font = '11px "Segoe UI", sans-serif';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const val = niceMax * i / 4;
+    const py = y(val);
+    ctx.beginPath();
+    ctx.moveTo(pad.l, py);
+    ctx.lineTo(w - pad.r, py);
+    ctx.stroke();
+    ctx.fillText(String(Math.round(val)), 8, py + 4);
+  }
+  for (let i = 0; i <= 4; i++) {
+    const ts = t0 + (t1 - t0) * i / 4;
+    ctx.fillText(fmtShort(ts), x(ts) - 14, h - 6);
+  }
+
+  data.targets.forEach((t, i) => {
+    const color = PALETTE[i % PALETTE.length];
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    let drawing = false;
+    (t.series || []).forEach(([ts, ms]) => {
+      if (ms === null || ms === undefined) { drawing = false; return; }
+      const px = x(ts), py = y(ms);
+      if (drawing) ctx.lineTo(px, py);
+      else { ctx.moveTo(px, py); drawing = true; }
+    });
+    ctx.stroke();
+    ctx.fillStyle = color;
+    (t.series || []).forEach(([ts, ms]) => {
+      if (ms === null || ms === undefined) return;
+      ctx.beginPath();
+      ctx.arc(x(ts), y(ms), 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+}
+
+function renderEvents() {
+  const el = document.getElementById('events');
+  if (!data.events.length) {
+    el.innerHTML = '<li class="empty">暂无状态变化</li>';
+    return;
+  }
+  el.innerHTML = data.events.map(ev => {
+    const s = sevInfo(ev.sev);
+    return `<li>
+      <time>${fmtShort(ev.ts)}</time>
+      <span class="who" style="color:${s.color}">${eventTag(ev.sev)}${escapeHtml(ev.name)}</span>
+      <span class="why">${escapeHtml(ev.detail || '')}</span>
+    </li>`;
+  }).join('');
+}
+
+function eventTag(sev) {
+  if (sev === 'up') return '恢复 · ';
+  return '异常 · ';
+}
+
+function renderAvail() {
+  document.getElementById('avail').innerHTML = data.targets.map(t => {
+    const val = t.avail === null ? 0 : Math.max(0, Math.min(100, t.avail));
+    return `<div class="avail-row">
+      <span>${escapeHtml(t.name)}</span>
+      <span class="track"><i style="width:${val}%"></i></span>
+      <em>${t.avail === null ? '—' : t.avail.toFixed(1) + '%'}</em>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+window.addEventListener('resize', () => { if (data) drawChart(); });
+if (window.ResizeObserver) {
+  new ResizeObserver(() => { if (data) drawChart(); }).observe(document.querySelector('.chart-wrap'));
+}
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>

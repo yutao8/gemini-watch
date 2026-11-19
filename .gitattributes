@@ -1,0 +1,7 @@
+* text=auto
+
+# 脚本换行符：.sh 必须 LF（否则 macOS/Linux 上无法执行），.bat 保持 CRLF
+*.sh text eol=lf
+*.bat text eol=crlf
+
+*.ico binary

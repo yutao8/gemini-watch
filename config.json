@@ -1,0 +1,55 @@
+{
+  "interval_seconds": 60,
+  "timeout_seconds": 5,
+  "proxy": "",
+  "fail_threshold": 1,
+  "recover_threshold": 2,
+  "repeat_alert_minutes": 0,
+  "notify": {
+    "enabled": true,
+    "sound": true
+  },
+  "log_file": "gemini_watch.log",
+  "history_file": "history.jsonl",
+  "diagnose": {
+    "enabled": true,
+    "proxy_port": 7890,
+    "processes": ["clash", "mihomo", "verge", "v2ray", "xray", "sing-box"]
+  },
+  "panel": {
+    "enabled": true,
+    "host": "127.0.0.1",
+    "port": 47131
+  },
+  "tray": {
+    "enabled": true
+  },
+  "path_check": {
+    "enabled": true,
+    "require_proxy": false,
+    "proxy_port": 7890
+  },
+  "region_check": {
+    "enabled": true,
+    "api_key": "",
+    "model": "gemini-2.5-flash",
+    "interval_minutes": 10
+  },
+  "targets": [
+    {
+      "name": "Antigravity 后端",
+      "url": "https://cloudcode-pa.googleapis.com/",
+      "method": "GET"
+    },
+    {
+      "name": "Gemini API",
+      "url": "https://generativelanguage.googleapis.com/v1beta/models",
+      "method": "GET"
+    },
+    {
+      "name": "Gemini 网页版",
+      "url": "https://gemini.google.com/",
+      "method": "GET"
+    }
+  ]
+}
