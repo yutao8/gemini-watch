@@ -172,7 +172,7 @@ git tag v1.0.1
 git push origin v1.0.1
 ```
 
-流程是：三个平台并行构建 → 汇总产物 → 创建同名 Release 并上传附件（若该标签已有 Release，则覆盖上传）。附件名会自动带版本号，例如 `GeminiWatch-v1.0.1-windows-x64.exe`。
+流程是：三个平台并行构建 → 汇总产物 → 创建同名 Release 并上传附件（若该标签已有 Release，则覆盖上传）。附件名会自动带版本号，例如 `GeminiWatch-v1.0.1-windows-x64.exe`。Release 正文会保留下载表格，并自动追加本次提交的变更记录。
 
 手动触发（`workflow_dispatch`）只生成 Actions Artifacts，不会发 Release。某个架构构建失败时，其余产物仍会照常发布。
 
