@@ -137,3 +137,71 @@ jobs:
           path: GeminiWatch-linux-x64.tar.gz
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    # 只有推送 v* 标签时才发布；always() 保证某个架构失败也能发布其余产物
+    needs: [windows, macos, linux]
+    if: always() && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect release files
+        run: |
+          mkdir -p release
+          copy_if() {
+            if [ -f "$1" ]; then cp "$1" "$2"; fi
+          }
+          copy_if artifacts/GeminiWatch-windows-x64/GeminiWatch.exe "release/GeminiWatch-${GITHUB_REF_NAME}-windows-x64.exe"
+          copy_if artifacts/GeminiWatch-windows-arm64/GeminiWatch.exe "release/GeminiWatch-${GITHUB_REF_NAME}-windows-arm64.exe"
+          copy_if artifacts/GeminiWatch-macOS-arm64/GeminiWatch-macOS-arm64.zip "release/GeminiWatch-${GITHUB_REF_NAME}-macOS-arm64.zip"
+          copy_if artifacts/GeminiWatch-macOS-x64/GeminiWatch-macOS-x64.zip "release/GeminiWatch-${GITHUB_REF_NAME}-macOS-x64.zip"
+          copy_if artifacts/GeminiWatch-linux-x64/GeminiWatch-linux-x64.tar.gz "release/GeminiWatch-${GITHUB_REF_NAME}-linux-x64.tar.gz"
+          ls -lh release
+          if [ -z "$(ls -A release)" ]; then
+            echo "没有可发布的产物"
+            exit 1
+          fi
+
+      - name: Write release notes
+        run: |
+          cat > release-notes.md <<EOF
+          ## 下载
+
+          | 平台 | 文件 |
+          |---|---|
+          | Windows x64 | \`GeminiWatch-${GITHUB_REF_NAME}-windows-x64.exe\` |
+          | Windows ARM64 | \`GeminiWatch-${GITHUB_REF_NAME}-windows-arm64.exe\` |
+          | macOS Apple Silicon | \`GeminiWatch-${GITHUB_REF_NAME}-macOS-arm64.zip\` |
+          | macOS Intel | \`GeminiWatch-${GITHUB_REF_NAME}-macOS-x64.zip\` |
+          | Linux x64 | \`GeminiWatch-${GITHUB_REF_NAME}-linux-x64.tar.gz\` |
+
+          ## 使用
+
+          运行后托盘出现图标，面板地址 <http://127.0.0.1:47131>。配置与日志在用户数据目录自动生成：
+
+          - Windows: \`%APPDATA%\\GeminiWatch\`
+          - macOS: \`~/Library/Application Support/GeminiWatch\`
+          - Linux: \`~/.config/GeminiWatch\`
+
+          ## 注意
+
+          - macOS 应用未签名，首次打开需执行 \`xattr -dr com.apple.quarantine GeminiWatch.app\`
+          - Windows 可执行文件如被标记，右键属性勾选「解除锁定」
+          - Linux 无图形桌面时使用 \`--no-tray\` 参数
+          EOF
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md release/*
+          fi

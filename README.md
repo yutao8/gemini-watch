@@ -163,6 +163,19 @@ Windows 的 arm64 组合跑在 `windows-11-arm` runner 上，依赖 PyInstaller 
 - 构建在公开 runner 上进行，产物不含任何本机配置；首次运行会在目标机器上生成默认配置
 - Windows 的 CI 构建复用 `build_exe.bat`，脚本检测到 `CI` 环境变量时会跳过 `pause`
 
+### 发布新版本
+
+打一个 `v` 开头的标签并推送，会自动构建并创建 GitHub Release：
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+流程是：三个平台并行构建 → 汇总产物 → 创建同名 Release 并上传附件（若该标签已有 Release，则覆盖上传）。附件名会自动带版本号，例如 `GeminiWatch-v1.0.1-windows-x64.exe`。
+
+普通 push 只生成 Actions Artifacts，不会发 Release。某个架构构建失败时，其余产物仍会照常发布。
+
 ### Windows
 
 双击 `build_exe.bat`，产物为 `dist\GeminiWatch.exe`（单文件、无控制台）。脚本依次完成：
